@@ -93,46 +93,61 @@ requestAnimationFrame(draw);
   reduced.addEventListener('change', reset);
 })();
 
-// Animate only the decorative menu network, without moving its controls.
+// Randomized decorative network distributed across the whole menu.
 (() => {
   const svg = document.querySelector('.n-network');
   if (!svg) return;
-  const dots = [...svg.querySelectorAll('circle')];
-  const origins = dots.map(dot => ({x: +dot.getAttribute('cx'), y: +dot.getAttribute('cy')}));
-  const edgeGroup = svg.querySelector('g');
-  const edges = [];
-  for (let i = 0; i < origins.length; i++) {
-    for (let j = i + 1; j < origins.length; j++) {
-      if (Math.hypot(origins[i].x - origins[j].x, origins[i].y - origins[j].y) < 93)
-        edges.push([i, j]);
-    }
-  }
-  let visible = true, frame = 0, started = 0, previous = 0;
+  const ns = 'http://www.w3.org/2000/svg';
+  const links = document.createElementNS(ns, 'path');
+  links.setAttribute('fill', 'none'); links.setAttribute('stroke', 'currentColor');
+  links.setAttribute('stroke-width', '.65');
+  const dotsGroup = document.createElementNS(ns, 'g');
+  dotsGroup.setAttribute('fill', 'currentColor');
+  const width = 691, height = 410, columns = 7, rows = 4;
+  const points = Array.from({length: columns * rows}, (_, i) => {
+    const dot = document.createElementNS(ns, 'circle');
+    dot.setAttribute('r', '1.35'); dotsGroup.append(dot);
+    const angle = Math.random() * Math.PI * 2, speed = 3 + Math.random() * 4;
+    return {
+      x: ((i % columns) + .15 + Math.random() * .7) * width / columns,
+      y: (Math.floor(i / columns) + .15 + Math.random() * .7) * height / rows,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      phase: Math.random() * Math.PI * 2, dot
+    };
+  });
+  svg.replaceChildren(links, dotsGroup);
+  let visible = true, frame = 0, previous = 0;
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
+  function render(dt, time) {
+    const segments = [];
+    points.forEach((p, i) => {
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.x < 3 || p.x > width-3) { p.vx *= -1; p.x = Math.max(3, Math.min(width-3, p.x)); }
+      if (p.y < 3 || p.y > height-3) { p.vy *= -1; p.y = Math.max(3, Math.min(height-3, p.y)); }
+      p.dot.setAttribute('cx', p.x.toFixed(2)); p.dot.setAttribute('cy', p.y.toFixed(2));
+      p.dot.setAttribute('opacity', (.6 + Math.sin(time * .00045 + p.phase) * .25).toFixed(2));
+      for (let j = i + 1; j < points.length; j++) {
+        const q = points[j];
+        if (Math.hypot(p.x-q.x,p.y-q.y) < 108)
+          segments.push('M'+p.x.toFixed(2)+' '+p.y.toFixed(2)+'L'+q.x.toFixed(2)+' '+q.y.toFixed(2));
+      }
+    });
+    links.setAttribute('d', segments.join(''));
+  }
+  render(0, 0);
   function paint(time) {
     frame = 0;
     if (!visible || document.hidden || motion.matches) return;
-    if (!started) started = time;
-    if (time - previous > 32) {
+    const elapsed = time - previous;
+    if (elapsed >= 33) {
+      render(previous ? Math.min(elapsed / 1000, .08) : 0, time);
       previous = time;
-      const t = (time - started) / 1000;
-      const points = origins.map((p, i) => ({
-        x: p.x + Math.sin(t * .42 + i * 1.7) * 11,
-        y: p.y + Math.sin(t * .33 + i * 2.1) * 9
-      }));
-      dots.forEach((dot, i) => {
-        dot.setAttribute('cx', points[i].x.toFixed(2));
-        dot.setAttribute('cy', points[i].y.toFixed(2));
-      });
-      edgeGroup.querySelector('path').setAttribute('d', edges.map(([a, b]) =>
-        'M' + points[a].x.toFixed(2) + ' ' + points[a].y.toFixed(2) +
-        'L' + points[b].x.toFixed(2) + ' ' + points[b].y.toFixed(2)).join(''));
     }
     frame = requestAnimationFrame(paint);
   }
   function resume() {
     if (frame) cancelAnimationFrame(frame);
-    frame = 0;
+    frame = 0; previous = 0;
     if (visible && !document.hidden && !motion.matches) frame = requestAnimationFrame(paint);
   }
   new IntersectionObserver(entries => { visible = entries[0].isIntersecting; resume(); }).observe(svg);
