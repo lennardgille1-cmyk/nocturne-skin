@@ -111,7 +111,7 @@ requestAnimationFrame(draw);
     const grouped = i < 23;
     return {x:grouped?Math.max(4,Math.min(width-4,center.x+Math.cos(angle)*radius)):Math.random()*width,
       y:grouped?Math.max(4,Math.min(height-4,center.y+Math.sin(angle)*radius)):Math.random()*height,
-      vx:(Math.random()-.5)*9,vy:(Math.random()-.5)*9,dot};
+      vx:(Math.random()-.5)*14,vy:(Math.random()-.5)*14,dot};
   });
   svg.replaceChildren(lines,dots);
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
