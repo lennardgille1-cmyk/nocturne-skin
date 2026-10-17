@@ -109,7 +109,7 @@ requestAnimationFrame(draw);
       const radius = j === 3 ? 13 : 24 + Math.random() * 15;
       const dot = document.createElementNS(ns, 'circle');
       dot.setAttribute('r', '1.4'); dots.append(dot);
-      return {x: Math.cos(a)*radius, y: Math.sin(a)*radius, phase: Math.random()*6.28, dot};
+      return {x: Math.cos(a)*radius, y: Math.sin(a)*radius, phaseX: Math.random()*6.28, phaseY: Math.random()*6.28, speedX: (.12+Math.random()*.43)*(Math.random()<.5?-1:1), speedY: (.12+Math.random()*.43)*(Math.random()<.5?-1:1), amplitude: 2+Math.random(), dot};
     });
     return {x: 94 + (i%3)*244 + (Math.random()-.5)*24,
       y: 96 + Math.floor(i/3)*211 + (Math.random()-.5)*22,
@@ -124,8 +124,8 @@ requestAnimationFrame(draw);
       const cx = c.x + Math.sin(t*c.speed+c.phase)*16;
       const cy = c.y + Math.cos(t*c.speed*.8+c.phase)*13;
       const p = c.nodes.map(n => ({
-        x: cx+n.x+Math.sin(t*.3+n.phase)*5,
-        y: cy+n.y+Math.cos(t*.25+n.phase)*5
+        x: cx+n.x+Math.sin(t*n.speedX+n.phaseX)*n.amplitude,
+        y: cy+n.y+Math.cos(t*n.speedY+n.phaseY)*n.amplitude
       }));
       c.nodes.forEach((n,i) => {
         n.dot.setAttribute('cx',p[i].x.toFixed(2));
