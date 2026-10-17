@@ -93,64 +93,62 @@ requestAnimationFrame(draw);
   reduced.addEventListener('change', reset);
 })();
 
-// Randomized decorative network distributed across the whole menu.
+// Connected triangular constellations, spread across the black menu.
 (() => {
   const svg = document.querySelector('.n-network');
   if (!svg) return;
   const ns = 'http://www.w3.org/2000/svg';
-  const links = document.createElementNS(ns, 'path');
-  links.setAttribute('fill', 'none'); links.setAttribute('stroke', 'currentColor');
-  links.setAttribute('stroke-width', '.65');
-  const dotsGroup = document.createElementNS(ns, 'g');
-  dotsGroup.setAttribute('fill', 'currentColor');
-  const width = 691, height = 410, columns = 7, rows = 4;
-  const points = Array.from({length: columns * rows}, (_, i) => {
-    const dot = document.createElementNS(ns, 'circle');
-    dot.setAttribute('r', '1.35'); dotsGroup.append(dot);
-    const angle = Math.random() * Math.PI * 2, speed = 3 + Math.random() * 4;
-    return {
-      x: ((i % columns) + .15 + Math.random() * .7) * width / columns,
-      y: (Math.floor(i / columns) + .15 + Math.random() * .7) * height / rows,
-      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-      phase: Math.random() * Math.PI * 2, dot
-    };
-  });
-  svg.replaceChildren(links, dotsGroup);
-  let visible = true, frame = 0, previous = 0;
-  const motion = matchMedia('(prefers-reduced-motion: reduce)');
-  function render(dt, time) {
-    const segments = [];
-    points.forEach((p, i) => {
-      p.x += p.vx * dt; p.y += p.vy * dt;
-      if (p.x < 3 || p.x > width-3) { p.vx *= -1; p.x = Math.max(3, Math.min(width-3, p.x)); }
-      if (p.y < 3 || p.y > height-3) { p.vy *= -1; p.y = Math.max(3, Math.min(height-3, p.y)); }
-      p.dot.setAttribute('cx', p.x.toFixed(2)); p.dot.setAttribute('cy', p.y.toFixed(2));
-      p.dot.setAttribute('opacity', (.6 + Math.sin(time * .00045 + p.phase) * .25).toFixed(2));
-      for (let j = i + 1; j < points.length; j++) {
-        const q = points[j];
-        if (Math.hypot(p.x-q.x,p.y-q.y) < 108)
-          segments.push('M'+p.x.toFixed(2)+' '+p.y.toFixed(2)+'L'+q.x.toFixed(2)+' '+q.y.toFixed(2));
-      }
+  const lines = document.createElementNS(ns, 'path');
+  lines.setAttribute('fill', 'none'); lines.setAttribute('stroke', 'currentColor');
+  lines.setAttribute('stroke-width', '.65');
+  const dots = document.createElementNS(ns, 'g'); dots.setAttribute('fill', 'currentColor');
+  const clusters = Array.from({length: 6}, (_, i) => {
+    const angle = Math.random() * Math.PI * 2;
+    const nodes = Array.from({length: 4}, (_, j) => {
+      const a = angle + j * Math.PI * 2 / 3;
+      const radius = j === 3 ? 13 : 24 + Math.random() * 15;
+      const dot = document.createElementNS(ns, 'circle');
+      dot.setAttribute('r', '1.4'); dots.append(dot);
+      return {x: Math.cos(a)*radius, y: Math.sin(a)*radius, phase: Math.random()*6.28, dot};
     });
-    links.setAttribute('d', segments.join(''));
+    return {x: 94 + (i%3)*244 + (Math.random()-.5)*24,
+      y: 96 + Math.floor(i/3)*211 + (Math.random()-.5)*22,
+      phase: Math.random()*6.28, speed: .15+Math.random()*.13, nodes};
+  });
+  svg.replaceChildren(lines, dots);
+  const motion = matchMedia('(prefers-reduced-motion: reduce)');
+  let frame = 0, visible = true, previous = 0;
+  function render(time) {
+    const t = time/1000, segments = [];
+    clusters.forEach(c => {
+      const cx = c.x + Math.sin(t*c.speed+c.phase)*16;
+      const cy = c.y + Math.cos(t*c.speed*.8+c.phase)*13;
+      const p = c.nodes.map(n => ({
+        x: cx+n.x+Math.sin(t*.3+n.phase)*5,
+        y: cy+n.y+Math.cos(t*.25+n.phase)*5
+      }));
+      c.nodes.forEach((n,i) => {
+        n.dot.setAttribute('cx',p[i].x.toFixed(2));
+        n.dot.setAttribute('cy',p[i].y.toFixed(2));
+      });
+      [[0,1],[1,2],[2,0],[0,3],[1,3],[2,3]].forEach(([a,b]) =>
+        segments.push('M'+p[a].x.toFixed(2)+' '+p[a].y.toFixed(2)+'L'+p[b].x.toFixed(2)+' '+p[b].y.toFixed(2)));
+    });
+    lines.setAttribute('d',segments.join(''));
   }
-  render(0, 0);
+  render(0);
   function paint(time) {
     frame = 0;
     if (!visible || document.hidden || motion.matches) return;
-    const elapsed = time - previous;
-    if (elapsed >= 33) {
-      render(previous ? Math.min(elapsed / 1000, .08) : 0, time);
-      previous = time;
-    }
-    frame = requestAnimationFrame(paint);
+    if(time-previous>=33){render(time);previous=time;}
+    frame=requestAnimationFrame(paint);
   }
-  function resume() {
-    if (frame) cancelAnimationFrame(frame);
-    frame = 0; previous = 0;
-    if (visible && !document.hidden && !motion.matches) frame = requestAnimationFrame(paint);
+  function resume(){
+    if(frame)cancelAnimationFrame(frame);
+    frame=0;
+    if(visible&&!document.hidden&&!motion.matches)frame=requestAnimationFrame(paint);
   }
-  new IntersectionObserver(entries => { visible = entries[0].isIntersecting; resume(); }).observe(svg);
-  document.addEventListener('visibilitychange', resume);
-  motion.addEventListener('change', resume);
+  new IntersectionObserver(e=>{visible=e[0].isIntersecting;resume();}).observe(svg);
+  document.addEventListener('visibilitychange',resume);
+  motion.addEventListener('change',resume);
 })();
