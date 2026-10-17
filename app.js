@@ -62,3 +62,50 @@ const canvas=document.querySelector('#particles'),ctx=canvas.getContext('2d');co
   finePointer.addEventListener('change', reset);
   reduced.addEventListener('change', reset);
 })();
+
+// Animate only the decorative menu network, without moving its controls.
+(() => {
+  const svg = document.querySelector('.n-network');
+  if (!svg) return;
+  const dots = [...svg.querySelectorAll('circle')];
+  const origins = dots.map(dot => ({x: +dot.getAttribute('cx'), y: +dot.getAttribute('cy')}));
+  const edgeGroup = svg.querySelector('g');
+  const edges = [];
+  for (let i = 0; i < origins.length; i++) {
+    for (let j = i + 1; j < origins.length; j++) {
+      if (Math.hypot(origins[i].x - origins[j].x, origins[i].y - origins[j].y) < 93)
+        edges.push([i, j]);
+    }
+  }
+  let visible = true, frame = 0, started = 0, previous = 0;
+  const motion = matchMedia('(prefers-reduced-motion: reduce)');
+  function paint(time) {
+    frame = 0;
+    if (!visible || document.hidden || motion.matches) return;
+    if (!started) started = time;
+    if (time - previous > 32) {
+      previous = time;
+      const t = (time - started) / 1000;
+      const points = origins.map((p, i) => ({
+        x: p.x + Math.sin(t * .42 + i * 1.7) * 11,
+        y: p.y + Math.sin(t * .33 + i * 2.1) * 9
+      }));
+      dots.forEach((dot, i) => {
+        dot.setAttribute('cx', points[i].x.toFixed(2));
+        dot.setAttribute('cy', points[i].y.toFixed(2));
+      });
+      edgeGroup.querySelector('path').setAttribute('d', edges.map(([a, b]) =>
+        'M' + points[a].x.toFixed(2) + ' ' + points[a].y.toFixed(2) +
+        'L' + points[b].x.toFixed(2) + ' ' + points[b].y.toFixed(2)).join(''));
+    }
+    frame = requestAnimationFrame(paint);
+  }
+  function resume() {
+    if (frame) cancelAnimationFrame(frame);
+    frame = 0;
+    if (visible && !document.hidden && !motion.matches) frame = requestAnimationFrame(paint);
+  }
+  new IntersectionObserver(entries => { visible = entries[0].isIntersecting; resume(); }).observe(svg);
+  document.addEventListener('visibilitychange', resume);
+  motion.addEventListener('change', resume);
+})();
