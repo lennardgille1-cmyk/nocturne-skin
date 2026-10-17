@@ -102,10 +102,15 @@ requestAnimationFrame(draw);
   lines.setAttribute('fill', 'none'); lines.setAttribute('stroke', 'currentColor');
   lines.setAttribute('stroke-width', '.65');
   const dots = document.createElementNS(ns, 'g'); dots.setAttribute('fill', 'currentColor');
-  const points = Array.from({length: 28}, () => {
+  const centers = Array.from({length: 4}, () => ({x:45+Math.random()*(width-90), y:40+Math.random()*(height-80)}));
+  const points = Array.from({length: 29}, (_, i) => {
     const dot = document.createElementNS(ns, 'circle');
     dot.setAttribute('r','1.25'); dots.append(dot);
-    return {x:Math.random()*width,y:Math.random()*height,
+    const center = centers[Math.floor(Math.random()*centers.length)];
+    const angle = Math.random()*Math.PI*2, radius = 12+Math.random()*65;
+    const grouped = i < 23;
+    return {x:grouped?Math.max(4,Math.min(width-4,center.x+Math.cos(angle)*radius)):Math.random()*width,
+      y:grouped?Math.max(4,Math.min(height-4,center.y+Math.sin(angle)*radius)):Math.random()*height,
       vx:(Math.random()-.5)*9,vy:(Math.random()-.5)*9,dot};
   });
   svg.replaceChildren(lines,dots);
