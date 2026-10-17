@@ -1,5 +1,35 @@
-const canvas=document.querySelector('#particles'),ctx=canvas.getContext('2d');const reduced=matchMedia('(prefers-reduced-motion: reduce)');let points=[];function resize(){canvas.width=innerWidth;canvas.height=1000;points=Array.from({length:45},()=>({x:Math.random()*canvas.width,y:Math.random()*1000,vx:(Math.random()-.5)*.15,vy:(Math.random()-.5)*.15}))}resize();addEventListener('resize',resize);function draw(){if(!reduced.matches&&!document.hidden){ctx.clearRect(0,0,canvas.width,1000);for(const p of points){p.x=(p.x+p.vx+canvas.width)%canvas.width;p.y=(p.y+p.vy+1000)%1000;ctx.fillStyle='#43c5cf77';ctx.fillRect(p.x,p.y,2,2);for(const q of points){const d=Math.hypot(p.x-q.x,p.y-q.y);if(d<140){ctx.strokeStyle=`rgba(67,197,207,${(1-d/140)*.13})`;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}}}requestAnimationFrame(draw)}draw();
-
+const canvas = document.querySelector('#particles'), ctx = canvas.getContext('2d');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+let points = [], width = 0, height = 0, lastTime = 0;
+function resize() {
+  width = innerWidth; height = innerHeight;
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const count = Math.max(28, Math.min(70, Math.round(width * height / 22000)));
+  points = Array.from({length: count}, () => ({x: Math.random()*width, y: Math.random()*height, vx: (Math.random()-.5)*9, vy: (Math.random()-.5)*9}));
+}
+resize(); addEventListener('resize', resize);
+function draw(time) {
+  const dt = Math.min((time - lastTime) / 1000 || 0, .05); lastTime = time;
+  if (!reduced.matches && !document.hidden) {
+    ctx.clearRect(0, 0, width, height);
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      p.x = (p.x + p.vx*dt + width)%width; p.y = (p.y + p.vy*dt + height)%height;
+      ctx.fillStyle = 'rgba(67,197,207,.65)'; ctx.fillRect(p.x, p.y, 2, 2);
+      for (let j = i+1; j < points.length; j++) {
+        const q = points[j], d = Math.hypot(p.x-q.x, p.y-q.y);
+        if (d < 150) {
+          ctx.strokeStyle = 'rgba(67,197,207,' + ((1-d/150)*.24) + ')';
+          ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke();
+        }
+      }
+    }
+  }
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
 
 // Pointer effects share one scheduled frame; no mouse-event layout writes.
 (() => {
